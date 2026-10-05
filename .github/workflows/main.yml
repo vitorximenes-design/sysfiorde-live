@@ -117,7 +117,7 @@ jobs:
           echo "LINHAS:"
           wc -l sysfiorde.csv
 
-      -       - name: Verify CSV
+      - name: Verify CSV
         run: |
           echo "ARQUIVO:"
           ls -lh sysfiorde.csv
