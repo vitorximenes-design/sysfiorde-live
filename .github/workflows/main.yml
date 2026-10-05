@@ -1,3 +1,25 @@
+name: Test Sysfiorde
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
       - name: Run test
         env:
           SYSFIODE_URL: ${{ secrets.SYSFIODE_URL }}
@@ -43,16 +65,11 @@
 
                   print(f"\nLINHA {row_number} | COLUNAS: {len(cells)}")
 
-                  values = []
-
-                  for cell in cells:
+                  for column_number, cell in enumerate(cells):
                       text = cell.get_text(" ", strip=True)
 
                       if len(text) > 120:
                           text = text[:120] + "..."
 
-                      values.append(text)
-
-                  for column_number, value in enumerate(values):
-                      print(f"[{column_number}] {value}")
+                      print(f"[{column_number}] {text}")
           PY
