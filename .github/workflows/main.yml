@@ -117,8 +117,17 @@ jobs:
           echo "LINHAS:"
           wc -l sysfiorde.csv
 
-      - name: Upload CSV
+      -       - name: Verify CSV
+        run: |
+          echo "ARQUIVO:"
+          ls -lh sysfiorde.csv
+          echo "PRIMEIRAS LINHAS:"
+          head -n 3 sysfiorde.csv
+
+      - name: Upload CSV artifact
         uses: actions/upload-artifact@v4
         with:
           name: sysfiorde-dados
-          path: sysfiorde.csv
+          path: ./sysfiorde.csv
+          if-no-files-found: error
+          retention-days: 1
