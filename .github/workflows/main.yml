@@ -1,10 +1,10 @@
-name: Test Sysfiorde
+name: Sysfiorde Live
 
 on:
   workflow_dispatch:
 
 jobs:
-  test:
+  extract:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,12 +17,13 @@ jobs:
         run: |
           pip install requests beautifulsoup4
 
-      - name: Analyze Sysfiorde table
+      - name: Extract Sysfiorde data
         env:
           SYSFIODE_URL: ${{ secrets.SYSFIODE_URL }}
         run: |
           python - <<'PY'
           import os
+          import csv
           import requests
           from bs4 import BeautifulSoup
 
@@ -39,46 +40,85 @@ jobs:
           print("STATUS:", response.status_code)
           print("TAMANHO HTML:", len(response.content))
 
+          response.raise_for_status()
+
           soup = BeautifulSoup(response.text, "html.parser")
           tables = soup.find_all("table")
 
           print("TABELAS:", len(tables))
 
-          for table_number, table in enumerate(tables):
+          # Tabela 7 = documentos
+          table = tables[7]
 
-              rows = table.find_all("tr", recursive=False)
+          rows = table.find_all("tr", recursive=False)
 
-              if len(rows) < 1000:
-                  continue
+          print("TABELA 7 - LINHAS:", len(rows))
 
-              print("\n" + "=" * 100)
-              print(f"TABELA {table_number}")
-              print(f"LINHAS: {len(rows)}")
-              print("=" * 100)
+          output_file = "sysfiorde.csv"
 
-              for row_number, row in enumerate(rows[:3]):
+          with open(
+              output_file,
+              "w",
+              newline="",
+              encoding="utf-8-sig"
+          ) as f:
+
+              writer = csv.writer(f)
+
+              writer.writerow([
+                  "Razão Social",
+                  "CNPJ",
+                  "Descrição Docto",
+                  "Tipo Docto",
+                  "Dt.Criação Docto",
+                  "Dt.Validade Docto",
+                  "Usuário Inclusão Docto"
+              ])
+
+              registros = 0
+
+              for row in rows:
 
                   cells = row.find_all(
                       ["th", "td"],
                       recursive=False
                   )
 
-                  print(
-                      f"\nLINHA {row_number} | "
-                      f"COLUNAS: {len(cells)}"
-                  )
+                  if len(cells) < 7:
+                      continue
 
-                  for column_number, cell in enumerate(cells):
+                  valores = []
 
-                      text = cell.get_text(
+                  for cell in cells[:7]:
+
+                      texto = cell.get_text(
                           " ",
                           strip=True
                       )
 
-                      if len(text) > 150:
-                          text = text[:150] + "..."
+                      valores.append(texto)
 
-                      print(
-                          f"[{column_number}] {text}"
-                      )
+                  # Ignora linhas totalmente vazias
+                  if not any(valores):
+                      continue
+
+                  writer.writerow(valores)
+
+                  registros += 1
+
+          print("ARQUIVO:", output_file)
+          print("REGISTROS EXTRAÍDOS:", registros)
+
           PY
+
+      - name: Show file information
+        run: |
+          ls -lh sysfiorde.csv
+          echo "LINHAS:"
+          wc -l sysfiorde.csv
+
+      - name: Upload CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysfiorde-dados
+          path: sysfiorde.csv
